@@ -21,7 +21,7 @@ To test this, we built and backtested **three long-short sentiment strategies of
 | Component | Description |
 |---|---|
 | **Filings** | SEC 10-K and 10-Q disclosures |
-| **Sentiment lexicon** | Loughran-McDonald (LM) financial dictionary — 7 categories: Negative, Positive, Uncertainty, Litigious, Strong Modal, Weak Modal, Constraining |
+| **Sentiment lexicon** | Loughran-McDonald (LM) financial dictionary: 7 categories: Negative, Positive, Uncertainty, Litigious, Strong Modal, Weak Modal, Constraining |
 | **Returns** | Monthly equity returns, merged to filings via CIK / PERMNO |
 | **Window** | January 1994 – December 2023 (360 months) |
 | **Sample** | ~242,600 firm-month observations |
