@@ -8,11 +8,11 @@
 
 ## Overview
 
-This project tests whether the **sentiment expressed in corporate SEC filings (10-K and 10-Q)** carries information about *future* stock returns. The intuition behind the hypothesis is that qualitative, firm-specific tone is harder for the market to price quickly than hard quantitative metrics, so a measurable lag may exist between when sentiment is disclosed and when it is fully reflected in price — a lag a systematic strategy could potentially capture.
+This project tests whether the **sentiment expressed in corporate SEC filings (10-K and 10-Q)** carries information about *future* stock returns. The intuition behind the hypothesis is that qualitative, firm-specific tone is harder for the market to price quickly than hard quantitative metrics, so a measurable lag may exist between when sentiment is disclosed and when it is fully reflected in price (a lag a systematic strategy could potentially capture).
 
 To test this, we built and backtested **three long-short sentiment strategies of increasing complexity** over a 30-year window (1994–2023, ~242,600 firm-month observations) and compared their out-of-sample performance.
 
-**Headline finding:** the *simplest* signal was by far the strongest. Added complexity — more sentiment categories, sector-neutralization, winsorization, and weight caps — consistently *hurt* performance rather than helping it.
+**Headline finding:** the *simplest* signal was by far the strongest. Added complexity (more sentiment categories, sector-neutralization, winsorization, and weight caps) consistently *hurt* performance rather than helping it.
 
 ---
 
@@ -83,7 +83,7 @@ Isolating the two complex models shows their persistent, grinding decline:
 
 ### Quintile (fractile) returns
 
-Tellingly, the expanded and enhanced models show returns *declining* from the low-sentiment quintile (F1) to the high-sentiment quintile (F5) — the **opposite** of the intended long-high / short-low design, which is why their long-short spreads came out negative.
+Tellingly, the expanded and enhanced models show returns *declining* from the low-sentiment quintile (F1) to the high-sentiment quintile (F5), the **opposite** of the intended long-high / short-low design, which is why their long-short spreads came out negative.
 
 ![Average monthly returns by Expanded LM signal quintile](figures/03_fractile_expanded.png)
 ![Average monthly returns by Enhanced signal quintile](figures/04_fractile_enhanced.png)
@@ -97,7 +97,7 @@ Regressing next-month returns on each sentiment signal across all ~242,600 obser
 | Baseline | −0.00141 | −2.58 | 0.0099 | 0.110 | 242,599 |
 | Expanded LM | −0.00052 | −4.63 | 0.000004 | 0.110 | 242,663 |
 
-Both signals are statistically significant but carry small, *negative* coefficients at the firm-month level — consistent with the near-zero information coefficients and with the idea that low-sentiment firms are sometimes underpriced rather than simply "bad."
+Both signals are statistically significant but carry small, *negative* coefficients at the firm-month level, consistent with the near-zero information coefficients and with the idea that low-sentiment firms are sometimes underpriced rather than simply "bad."
 
 ---
 
@@ -105,16 +105,16 @@ Both signals are statistically significant but carry small, *negative* coefficie
 
 **Why did the simple baseline win?** The baseline directly captures the positive-minus-negative tone spread and held up across the full sample, especially when annualized. This supports the core idea that disclosure tone has genuine economic relevance.
 
-**Why did complexity hurt?** All three strategies posted near-zero (slightly negative) information coefficients. For the expanded and enhanced models, the more negative IC suggests they were over-capturing negative sentiment — which can be a signal of *underpricing* rather than poor fundamentals. Low sentiment may flag riskier firms or pessimistic market pricing (a risk premium / buying opportunity) rather than future underperformance, so aggressively shorting the lowest-sentiment names worked against the portfolios.
+**Why did complexity hurt?** All three strategies posted near-zero (slightly negative) information coefficients. For the expanded and enhanced models, the more negative IC suggests they were over-capturing negative sentiment which can be a signal of *underpricing* rather than poor fundamentals. Low sentiment may flag riskier firms or pessimistic market pricing (a risk premium / buying opportunity) rather than future underperformance, so aggressively shorting the lowest-sentiment names worked against the portfolios.
 
-**Drawdowns.** Every strategy suffered a drawdown exceeding 70% at some point — the baseline's worst stretch came after the 2008 crisis, while the complex models' sharpest declines clustered around 2000 and 2003. Signals underperformed most during economic downturns, when sentiment is noisiest and most ambiguous. Firm size, volatility, and portfolio construction all materially amplified drawdowns: if shorted names rally while sentiment fails to reflect it, losses compound quickly.
+**Drawdowns.** Every strategy suffered a drawdown exceeding 70% at some point, the baseline's worst stretch came after the 2008 crisis, while the complex models' sharpest declines clustered around 2000 and 2003. Signals underperformed most during economic downturns, when sentiment is noisiest and most ambiguous. Firm size, volatility, and portfolio construction all materially amplified drawdowns: if shorted names rally while sentiment fails to reflect it, losses compound quickly.
 
 ---
 
 ## Limitations & Future Work
 
 - A near-75% maximum drawdown is likely intolerable for a real investor; in practice a sentiment signal would need to be combined with other factors and explicit risk controls.
-- A **contrarian model** that deliberately targets the pessimism / underpricing premium — paired with a risk-only benchmark — could turn the observed negative relationship into a usable edge.
+- A **contrarian model** that deliberately targets the pessimism / underpricing premium (paired with a risk-only benchmark) could turn the observed negative relationship into a usable edge.
 - Swapping the Loughran-McDonald lexicon for a **transformer-based model such as FinBERT** may capture context and tone more accurately than dictionary counts.
 - Adding **volatility controls, momentum, and disclosure-surprise features** could plausibly produce a genuinely profitable model and is a promising next step.
 
