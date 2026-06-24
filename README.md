@@ -75,7 +75,7 @@ All three strategies were evaluated over the full 360-month sample.
 
 The baseline signal compounds to roughly **500×** initial wealth over three decades, while both complex models steadily erode to *below* their starting value.
 
-![Cumulative long-short wealth index for all three strategies, log scale](figures/01_cumulative_all_strategies.png)
+![Cumulative long-short wealth index for all three strategies, log scale](figures/01_baseline_strategy.png)
 
 Isolating the two complex models shows their persistent, grinding decline:
 
