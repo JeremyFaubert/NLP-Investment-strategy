@@ -1,139 +1,111 @@
-# Investment Applications of NLP: Does 10-K / 10-Q Sentiment Predict Stock Returns?
+# SEC Filing Sentiment and Equity Returns
 
-**Authors:** Jeremy Faubert & Matthias Baker
-**Course:** FT370 — Investment Applications of NLP (Profs. Zhang & Babaian)
-**Date:** May 2026
+**Authors:** Jeremy Faubert and Matthias Baker
 
----
+**Course:** FT370 — Investment Applications of NLP
 
-## Overview
+**Tools:** Python, pandas, NumPy, statsmodels, matplotlib
 
-This project tests whether the **sentiment expressed in corporate SEC filings (10-K and 10-Q)** carries information about *future* stock returns. The intuition behind the hypothesis is that qualitative, firm-specific tone is harder for the market to price quickly than hard quantitative metrics, so a measurable lag may exist between when sentiment is disclosed and when it is fully reflected in price (a lag a systematic strategy could potentially capture).
+Does the language in corporate annual and quarterly filings relate to the following month's stock returns? This project compares three sentiment-based portfolio approaches using precomputed Loughran–McDonald SEC filing summaries and monthly equity returns.
 
-To test this, we built and backtested **three long-short sentiment strategies of increasing complexity** over a 30-year window (1994–2023, ~242,600 firm-month observations) and compared their out-of-sample performance.
+**Research status:** the current version corrects accounting and data-handling problems found during review. The earlier profitability and out-of-sample conclusions are withdrawn. Historical performance remains unvalidated pending dated security-to-issuer links, complete return coverage, and resolution of missing held returns. See [the correction notice](docs/CORRECTIONS.md).
 
-**Headline finding:** the *simplest* signal was by far the strongest. Added complexity (more sentiment categories, sector-neutralization, winsorization, and weight caps) consistently *hurt* performance rather than helping it.
+## Research approach
 
----
+The project normalizes filing word counts, compares firms within each month, forms portfolios, and evaluates the following month's returns. The configured formation period is January 1994–December 2023, with nominal holding months February 1994–January 2024.
 
-## Data
+| Approach | Signal | Portfolio construction in the current version |
+|---|---|---|
+| Baseline | Positive minus negative word counts, divided by uncertainty, then plus one | Long positive scores; short negative scores; weights proportional to score magnitude |
+| Expanded | A combination of seven standardized language measures | Long the highest monthly quintile; short the lowest; equal weights within each side |
+| Enhanced | Expanded signal with extreme formation-time values winsorized | Rank within industries; match industry allocations across both sides; use signal-strength weights with a hard 5% capital-based position cap |
 
-| Component | Description |
+The baseline retains `(Positive - Negative) / Uncertainty + 1` for comparison with the original specification. `(Positive - Negative) / (Uncertainty + 1)` is a separate, configurable specification; the parentheses change the signal.
+
+For the expanded signal, each category count is divided by total filing words, then standardized across firms in the same month. The combination is:
+
+```text
+z(Positive) - z(Negative) - z(Uncertainty) - z(Litigious)
+            + z(Strong Modal) - z(Weak Modal) - z(Constraining)
+```
+
+These signs are modeling choices, not evidence that a category predicts returns.
+
+## What the seven language categories mean
+
+The project uses category counts supplied in the [Loughran–McDonald filing summaries](https://sraf.nd.edu/sec-edgar-data/). It does not extract raw filing text or perform dictionary matching itself. The [official dictionary](https://sraf.nd.edu/loughranmcdonald-master-dictionary/) defines the seven categories:
+
+| Category | Language captured |
 |---|---|
-| **Filings** | SEC 10-K and 10-Q disclosures |
-| **Sentiment lexicon** | Loughran-McDonald (LM) financial dictionary: 7 categories: Negative, Positive, Uncertainty, Litigious, Strong Modal, Weak Modal, Constraining |
-| **Returns** | Monthly equity returns, merged to filings via CIK / PERMNO |
-| **Window** | January 1994 – December 2023 (360 months) |
-| **Sample** | ~242,600 firm-month observations |
+| Positive | Favorable or optimistic tone |
+| Negative | Adverse or pessimistic tone |
+| Uncertainty | Doubt, ambiguity, or unpredictability |
+| Litigious | Legal matters and litigation |
+| Strong modal | Certainty or strong commitment |
+| Weak modal | Possibility or tentative statements |
+| Constraining | Restrictions, limitations, or obligations |
 
-Filing word counts were used to normalize raw sentiment counts so that longer disclosures did not mechanically dominate the signal.
+## Why the accounting correction matters
 
----
+The original baseline subtracted an already negative short-position payoff. It therefore added the returns of two long groups, equivalent to 200% long exposure under the stated capital convention before financing. The corrected calculation subtracts the shorted stocks' underlying returns exactly once.
 
-## Methodology
+| Synthetic example | Original expression | Correct long-short P&L |
+|---|---:|---:|
+| Long stock +10%; shorted stock +20% | +30% | −10% |
+| Long stock +10%; shorted stock −20% | −10% | +30% |
 
-We constructed three strategies, each forming a monthly long-short portfolio and holding it for the following month's return.
+Correct accounting can increase or decrease the result. A positive output alone does not demonstrate useful sentiment prediction. The enhanced implementation also previously clipped future realized returns; the current version winsorizes available signals and preserves actual payoffs. [Calculation interpretation](docs/RESULTS.md) explains the return measures and remaining limitations.
 
-### 1. Baseline strategy
-A deliberately simple signal: the spread between positive and negative word counts, scaled by uncertainty.
+## Data handling and evaluation
 
-```
-Baseline Sentiment = ((N_Positive − N_Negative) / N_Uncertainty) + 1
-```
+- Pair returns with exactly the next calendar month before filtering; preserve missing and nonnumeric outcomes.
+- Select one whole latest filing record and retain its accession number. Apply a three-calendar-month age limit and a disclosed one Monday–Friday business-day availability lag. This approximates timing when acceptance timestamps are absent; it is not an exchange trading calendar.
+- Form holdings before checking whether future payoffs are available. An unresolved held return makes that portfolio month unavailable.
+- Match enhanced industry allocations and enforce the position cap. Infeasible capacity stays unallocated. Each side can use at most one capital unit, allowing up to 200% gross exposure; unallocated capacity contributes zero excess P&L.
+- Withhold full-period performance statistics while identifier, held-payoff, or benchmark checks fail. Descriptive regressions use month effects and issuer/month clustered uncertainty; they do not establish causality or out-of-sample prediction.
 
-**Portfolio:** long firms with a positive score (> 0), short firms with a negative score.
+Default `legacy_diagnostic` mode uses a [frozen public SEC current-ticker snapshot](resources/README.md) for inspection. Current tickers cannot certify historical identities. Alternative `verified_links` mode requires an independently reviewed dated PERMNO–CIK table; the mode name does not certify its provenance or coverage. The CIK–CUSIP input cannot repair returns that lack historical CUSIP.
 
-### 2. Expanded LM Quintiles
-A richer model using all seven Loughran-McDonald categories. Scores were normalized by filing length and standardized into monthly **z-scores** so firms could be compared fairly within each month (preventing any single firm from dominating on naturally larger raw values).
+Trading costs, borrow availability, fees, and financing are excluded. Complete data validation and a precommitted holdout or walk-forward evaluation remain necessary before making an investment-performance claim. The evidence does not establish profitability, underpricing, or that added complexity caused worse performance.
 
-**Portfolio:** sort firms into quintiles each month; go long the highest-sentiment quintile (F5) and short the lowest (F1).
+## Run the public calculation checks
 
-### 3. Enhanced Sector-Neutral Capped
-A refinement of the expanded model intended to strip out noise and concentration risk:
-- **Sector-neutral ranking** using Fama-French industry classifications (FFInd) to remove industry-language bias.
-- **Winsorization** of the top and bottom 1% of sentiment scores to limit outlier influence.
-- **Signal-strength weighting**, capped at 5% of the portfolio per name, to reward conviction without over-concentrating.
+Python 3.12 was used for the recorded checks. Clone this repository, change to its root directory, then run:
 
----
-
-## Results
-
-All three strategies were evaluated over the full 360-month sample.
-
-| Metric | Baseline | Expanded LM Quintiles | Enhanced Sector-Neutral Capped |
-|---|---:|---:|---:|
-| **Avg. monthly long-short return** | **+2.31%** | −0.32% | −0.37% |
-| **Annualized return** | **+23.46%** | −4.17% | −4.68% |
-| **Hit rate** | **65.56%** | 44.72% | 42.90% |
-| **Sharpe ratio** | **0.78** | −0.45 | −0.58 |
-| **Information ratio** | **0.23** | −0.13 | −0.17 |
-| **Max drawdown** | −74.81% | −71.46% | −77.32% |
-| **Average IC** | −0.0058 | −0.0081 | −0.0090 |
-| **Cumulative return** | **+55,628%** | −72.12% | −76.16% |
-
-### Cumulative performance (log scale)
-
-The baseline signal compounds to roughly **500×** initial wealth over three decades, while both complex models steadily erode to *below* their starting value.
-
-![Cumulative long-short wealth index for all three strategies, log scale](figures/01_baseline_strategy.png)
-
-Isolating the two complex models shows their persistent, grinding decline:
-
-![Cumulative wealth index for the expanded and enhanced strategies](figures/02_expanded_strategies.png)
-
-### Quintile (fractile) returns
-
-Tellingly, the expanded and enhanced models show returns *declining* from the low-sentiment quintile (F1) to the high-sentiment quintile (F5), the **opposite** of the intended long-high / short-low design, which is why their long-short spreads came out negative.
-
-![Average monthly returns by Expanded LM signal quintile](figures/03_fractile_expanded.png)
-![Average monthly returns by Enhanced signal quintile](figures/04_fractile_enhanced.png)
-
-### Panel regression
-
-Regressing next-month returns on each sentiment signal across all ~242,600 observations:
-
-| Model | Coefficient | t-stat | p-value | Adj. R² | Observations |
-|---|---:|---:|---:|---:|---:|
-| Baseline | −0.00141 | −2.58 | 0.0099 | 0.110 | 242,599 |
-| Expanded LM | −0.00052 | −4.63 | 0.000004 | 0.110 | 242,663 |
-
-Both signals are statistically significant but carry small, *negative* coefficients at the firm-month level, consistent with the near-zero information coefficients and with the idea that low-sentiment firms are sometimes underpriced rather than simply "bad."
-
----
-
-## Discussion
-
-**Why did the simple baseline win?** The baseline directly captures the positive-minus-negative tone spread and held up across the full sample, especially when annualized. This supports the core idea that disclosure tone has genuine economic relevance.
-
-**Why did complexity hurt?** All three strategies posted near-zero (slightly negative) information coefficients. For the expanded and enhanced models, the more negative IC suggests they were over-capturing negative sentiment which can be a signal of *underpricing* rather than poor fundamentals. Low sentiment may flag riskier firms or pessimistic market pricing (a risk premium / buying opportunity) rather than future underperformance, so aggressively shorting the lowest-sentiment names worked against the portfolios.
-
-**Drawdowns.** Every strategy suffered a drawdown exceeding 70% at some point, the baseline's worst stretch came after the 2008 crisis, while the complex models' sharpest declines clustered around 2000 and 2003. Signals underperformed most during economic downturns, when sentiment is noisiest and most ambiguous. Firm size, volatility, and portfolio construction all materially amplified drawdowns: if shorted names rally while sentiment fails to reflect it, losses compound quickly.
-
----
-
-## Limitations & Future Work
-
-- A near-75% maximum drawdown is likely intolerable for a real investor; in practice a sentiment signal would need to be combined with other factors and explicit risk controls.
-- A **contrarian model** that deliberately targets the pessimism / underpricing premium (paired with a risk-only benchmark) could turn the observed negative relationship into a usable edge.
-- Swapping the Loughran-McDonald lexicon for a **transformer-based model such as FinBERT** may capture context and tone more accurately than dictionary counts.
-- Adding **volatility controls, momentum, and disclosure-surprise features** could plausibly produce a genuinely profitable model and is a promising next step.
-
----
-
-## Conclusion
-
-A sentiment-based investing strategy is viable, but only as one input among several rather than a standalone signal. The most important lesson was methodological: **a more complex model is not always a better one.** The simplest baseline captured the real, persistent value in disclosure tone, while each layer of added sophistication introduced noise that degraded performance.
-
----
-
-## Repository contents
-
-```
-.
-├── README.md                         # This report
-├── figures/                          # Charts generated by the backtest
-├── notebook/Part2_model.ipynb        # Full data pipeline, backtest, and analysis
-└── report/Original_Report.docx       # Original write-up
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m unittest discover -s tests -v
 ```
 
-*Tech stack: Python, pandas, NumPy, statsmodels, matplotlib, Loughran-McDonald sentiment dictionary.*
+On Windows, activate with `.venv\Scripts\activate`.
+
+All **30 focused checks** use public synthetic fixtures and require no private financial inputs. They cover short accounting, calendar gaps, filing chronology, missing-outcome invariance, position caps, industry allocations, and metric definitions. Some execute labeled intermediate calculation fixtures; others exercise the current data and portfolio modules. Passing them verifies those behaviors, not the validity of a historical dataset.
+
+## Run the research notebook
+
+The [root notebook](NLP_Sentiment_Investing_model.ipynb) is the current entry point. Raw inputs are not redistributed; follow [data/README.md](data/README.md) to supply appropriately licensed source files. Set `NLP_DATA_DIR` and `NLP_OUTPUT_DIR` if needed; defaults are `data/` and `research_outputs/`. Keep source provenance and generated financial outputs private.
+
+With the environment above activated, install and start JupyterLab from the repository root:
+
+```bash
+python -m pip install jupyterlab
+jupyter lab NLP_Sentiment_Investing_model.ipynb
+```
+
+In Colab, clone the repository, change directory to it, and configure the data path; enable the optional Drive mount only if needed. Local code-cell execution was checked; Colab mounting/frontend integration was not tested. Dense month-effect regressions can require several GB of RAM; set `RUN_PANEL_REGRESSIONS=False` to inspect data and portfolio diagnostics without those fits.
+
+Notebook outputs are cleared to prevent stale results from appearing beside corrected code. The original public notebook, report, and figures remain in [archive/](archive/README.md), clearly marked as superseded.
+
+## Repository guide
+
+| Path | Purpose |
+|---|---|
+| `NLP_Sentiment_Investing_model.ipynb` | Current research pipeline |
+| `review_data.py`, `review_portfolios.py` | Data preparation and portfolio construction |
+| `review_fixes.py`, `review_inference.py` | Accounting, metrics, and descriptive regressions |
+| `tests/` | Synthetic checks and labeled calculation fixtures |
+| `docs/` | Detailed corrections and calculation interpretation |
+| `data/`, `resources/`, `results/` | Input instructions, public snapshot, and research-status notice |
+| `archive/` | Superseded original public artifacts |
